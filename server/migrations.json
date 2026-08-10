@@ -1,0 +1,7 @@
+{
+  "migrations": [
+    "2026_08_10_090621_create_accounts_table",
+    "2026_08_10_090622_create_account_identifiers_table",
+    "2026_08_10_090623_create_bans_table"
+  ]
+}
