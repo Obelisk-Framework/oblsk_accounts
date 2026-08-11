@@ -9,4 +9,6 @@ Account.timestamps = true
 Account.fillable = {}
 Account.hidden = {}
 
+HasPermissions.apply(Account, 'account')
+
 return Account
