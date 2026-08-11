@@ -3,9 +3,9 @@ return {
     up = function()
         Schema.create('account_identifiers', function(table)
             table:id()
-            table:integer('account_id'):notNullable()
-            table:string('type', 50):notNullable()
-            table:string('value', 255):notNullable()
+            table:integer('account_id')
+            table:string('type', 50)
+            table:string('value', 255)
             table:timestamps()
 
             table:unique({'type', 'value'})
