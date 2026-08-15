@@ -25,6 +25,12 @@ function FakeQueryBuilder:whereNull(column)
     return self
 end
 
+function FakeQueryBuilder:orderBy(column, direction)
+    self.orderColumn = column
+    self.orderDirection = direction or 'asc'
+    return self
+end
+
 function FakeQueryBuilder:firstSync()
     for _, row in ipairs(self.rows) do
         if rowMatches(row, self.wheres, self.whereNulls) then
@@ -41,6 +47,20 @@ function FakeQueryBuilder:getSync()
             table.insert(results, row)
         end
     end
+
+    -- Apply ordering if specified
+    if self.orderColumn then
+        table.sort(results, function(a, b)
+            local aVal = a[self.orderColumn]
+            local bVal = b[self.orderColumn]
+            if self.orderDirection == 'desc' then
+                return aVal > bVal
+            else
+                return aVal < bVal
+            end
+        end)
+    end
+
     return results
 end
 
@@ -77,6 +97,8 @@ local function makeFakeQueryBuilderModule(tables)
             nextIds = nextIds,
             wheres = {},
             whereNulls = {},
+            orderColumn = nil,
+            orderDirection = 'asc',
         }, FakeQueryBuilder)
     end
     return Module

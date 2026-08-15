@@ -151,4 +151,48 @@ function AccountService.getAccountId(source)
     return AccountService.sessionAccounts[source]
 end
 
+--- Best-effort display name for a ban/log row: the first non-deleted
+--- character on that account, or nil if the account has none yet (bans can
+--- predate character creation, e.g. an identifier-only ban).
+--- @param accountId number|nil
+--- @return string|nil
+local function characterDisplayName(accountId)
+    if not accountId then return nil end
+    local character = Character:where('account_id', accountId):whereNull('deleted_at'):firstSync()
+    if not character then return nil end
+    return character.first_name .. ' ' .. character.last_name
+end
+
+--- @return table[] every ban, newest first, each with a best-effort display_name
+function AccountService.listBans()
+    local rows = QueryBuilder.new('bans'):orderBy('created_at', 'desc'):getSync()
+    for _, row in ipairs(rows) do
+        row.display_name = characterDisplayName(row.account_id)
+    end
+    return rows
+end
+
+--- @return table[] every warn/kick log row, newest first, each with a best-effort display_name
+function AccountService.listModerationLogs()
+    local rows = QueryBuilder.new('moderation_logs'):orderBy('created_at', 'desc'):getSync()
+    for _, row in ipairs(rows) do
+        row.display_name = characterDisplayName(row.account_id)
+    end
+    return rows
+end
+
+--- @param accountId number
+--- @param reason string
+--- @param issuedBy string
+function AccountService.warn(accountId, reason, issuedBy)
+    return ModerationLog:createSync({ account_id = accountId, type = 'warn', reason = reason, issued_by = issuedBy })
+end
+
+--- @param accountId number
+--- @param reason string
+--- @param issuedBy string
+function AccountService.logKick(accountId, reason, issuedBy)
+    return ModerationLog:createSync({ account_id = accountId, type = 'kick', reason = reason, issued_by = issuedBy })
+end
+
 return AccountService
