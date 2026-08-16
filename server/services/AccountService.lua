@@ -46,8 +46,7 @@ function AccountService.findOrCreateAccount(identifiers)
     end
 
     local accountId
-    local existing = QueryBuilder.new('account_identifiers')
-        :where('type', 'license'):where('value', license.value):firstSync()
+    local existing = AccountIdentifier:where('type', 'license'):where('value', license.value):firstSync()
 
     if existing then
         accountId = existing.account_id
@@ -60,13 +59,12 @@ function AccountService.findOrCreateAccount(identifiers)
     local conflicts = {}
     for _, identifier in ipairs(identifiers) do
         if identifier.type ~= 'license' then
-            local row = QueryBuilder.new('account_identifiers')
-                :where('type', identifier.type):where('value', identifier.value):firstSync()
+            local row = AccountIdentifier:where('type', identifier.type):where('value', identifier.value):firstSync()
 
             if not row then
                 AccountIdentifier:createSync({ account_id = accountId, type = identifier.type, value = identifier.value })
             elseif row.account_id == accountId then
-                QueryBuilder.new('account_identifiers'):where('id', row.id):update({ updated_at = Database.now() })
+                AccountIdentifier:where('id', row.id):update({ updated_at = Database.now() })
             else
                 table.insert(conflicts, {
                     type = identifier.type,
@@ -94,16 +92,14 @@ function AccountService.checkBan(accountId, identifiers)
     end
 
     if accountId then
-        local ban = QueryBuilder.new('bans')
-            :where('account_id', accountId):whereNull('revoked_at'):firstSync()
+        local ban = Ban:where('account_id', accountId):whereNull('revoked_at'):firstSync()
         if isActive(ban) then
             return ban
         end
     end
 
     for _, identifier in ipairs(identifiers) do
-        local ban = QueryBuilder.new('bans')
-            :where('identifier_type', identifier.type)
+        local ban = Ban:where('identifier_type', identifier.type)
             :where('identifier_value', identifier.value)
             :whereNull('revoked_at')
             :firstSync()
@@ -133,7 +129,7 @@ end
 
 --- @param banId number
 function AccountService.unban(banId)
-    return QueryBuilder.new('bans'):where('id', banId):update({ revoked_at = Database.now() })
+    return Ban:where('id', banId):update({ revoked_at = Database.now() })
 end
 
 --- @param ban table a bans row (from checkBan)
@@ -165,7 +161,7 @@ end
 
 --- @return table[] every ban, newest first, each with a best-effort display_name
 function AccountService.listBans()
-    local rows = QueryBuilder.new('bans'):orderBy('created_at', 'desc'):getSync()
+    local rows = Ban:orderBy('created_at', 'desc'):getSync()
     for _, row in ipairs(rows) do
         row.display_name = characterDisplayName(row.account_id)
     end
@@ -174,7 +170,7 @@ end
 
 --- @return table[] every warn/kick log row, newest first, each with a best-effort display_name
 function AccountService.listModerationLogs()
-    local rows = QueryBuilder.new('moderation_logs'):orderBy('created_at', 'desc'):getSync()
+    local rows = ModerationLog:orderBy('created_at', 'desc'):getSync()
     for _, row in ipairs(rows) do
         row.display_name = characterDisplayName(row.account_id)
     end
