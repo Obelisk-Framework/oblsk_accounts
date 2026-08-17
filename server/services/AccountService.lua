@@ -46,23 +46,23 @@ function AccountService.findOrCreateAccount(identifiers)
     end
 
     local accountId
-    local existing = AccountIdentifier:where('type', 'license'):where('value', license.value):firstSync()
+    local existing = AccountIdentifier:where('type', 'license'):where('value', license.value):first()
 
     if existing then
         accountId = existing.account_id
     else
-        local account = Account:createSync({})
+        local account = Account:create({})
         accountId = account.attributes.id
-        AccountIdentifier:createSync({ account_id = accountId, type = 'license', value = license.value })
+        AccountIdentifier:create({ account_id = accountId, type = 'license', value = license.value })
     end
 
     local conflicts = {}
     for _, identifier in ipairs(identifiers) do
         if identifier.type ~= 'license' then
-            local row = AccountIdentifier:where('type', identifier.type):where('value', identifier.value):firstSync()
+            local row = AccountIdentifier:where('type', identifier.type):where('value', identifier.value):first()
 
             if not row then
-                AccountIdentifier:createSync({ account_id = accountId, type = identifier.type, value = identifier.value })
+                AccountIdentifier:create({ account_id = accountId, type = identifier.type, value = identifier.value })
             elseif row.account_id == accountId then
                 AccountIdentifier:where('id', row.id):update({ updated_at = Database.now() })
             else
@@ -92,7 +92,7 @@ function AccountService.checkBan(accountId, identifiers)
     end
 
     if accountId then
-        local ban = Ban:where('account_id', accountId):whereNull('revoked_at'):firstSync()
+        local ban = Ban:where('account_id', accountId):whereNull('revoked_at'):first()
         if isActive(ban) then
             return ban
         end
@@ -102,7 +102,7 @@ function AccountService.checkBan(accountId, identifiers)
         local ban = Ban:where('identifier_type', identifier.type)
             :where('identifier_value', identifier.value)
             :whereNull('revoked_at')
-            :firstSync()
+            :first()
         if isActive(ban) then
             return ban
         end
@@ -124,7 +124,7 @@ function AccountService.ban(target, reason, issuedBy, expiresAt)
         attributes.identifier_type = target.type
         attributes.identifier_value = target.value
     end
-    return Ban:createSync(attributes)
+    return Ban:create(attributes)
 end
 
 --- @param banId number
@@ -154,14 +154,14 @@ end
 --- @return string|nil
 local function characterDisplayName(accountId)
     if not accountId then return nil end
-    local character = Character:where('account_id', accountId):whereNull('deleted_at'):firstSync()
+    local character = Character:where('account_id', accountId):whereNull('deleted_at'):first()
     if not character then return nil end
     return character.first_name .. ' ' .. character.last_name
 end
 
 --- @return table[] every ban, newest first, each with a best-effort display_name
 function AccountService.listBans()
-    local rows = Ban:orderBy('created_at', 'desc'):getSync()
+    local rows = Ban:orderBy('created_at', 'desc'):get()
     for _, row in ipairs(rows) do
         row.display_name = characterDisplayName(row.account_id)
     end
@@ -170,7 +170,7 @@ end
 
 --- @return table[] every warn/kick log row, newest first, each with a best-effort display_name
 function AccountService.listModerationLogs()
-    local rows = ModerationLog:orderBy('created_at', 'desc'):getSync()
+    local rows = ModerationLog:orderBy('created_at', 'desc'):get()
     for _, row in ipairs(rows) do
         row.display_name = characterDisplayName(row.account_id)
     end
@@ -181,14 +181,14 @@ end
 --- @param reason string
 --- @param issuedBy string
 function AccountService.warn(accountId, reason, issuedBy)
-    return ModerationLog:createSync({ account_id = accountId, type = 'warn', reason = reason, issued_by = issuedBy })
+    return ModerationLog:create({ account_id = accountId, type = 'warn', reason = reason, issued_by = issuedBy })
 end
 
 --- @param accountId number
 --- @param reason string
 --- @param issuedBy string
 function AccountService.logKick(accountId, reason, issuedBy)
-    return ModerationLog:createSync({ account_id = accountId, type = 'kick', reason = reason, issued_by = issuedBy })
+    return ModerationLog:create({ account_id = accountId, type = 'kick', reason = reason, issued_by = issuedBy })
 end
 
 return AccountService
