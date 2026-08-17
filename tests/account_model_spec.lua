@@ -41,7 +41,7 @@ test('an Account instance can grant and check its own permission', function()
     QueryBuilder = makeFakeQueryBuilderModule(tables)
 
     local ok, err = pcall(function()
-        local instance = Account:findSync(3)
+        local instance = Account:find(3)
         eq(instance:can('bypass_ban'), false)
         instance:grant('bypass_ban')
         truthy(instance:can('bypass_ban'))
